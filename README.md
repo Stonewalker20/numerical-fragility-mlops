@@ -2,7 +2,6 @@
 
 ### Numerical Stability Risks in Machine Learning Systems
 
-**Course:** CSI 4150 – AI for IT Operations
 **Author:** Cordell Stonecipher
 
 ---
