@@ -1,0 +1,10 @@
+mlflow.db
+mlartifacts/
+mlruns/
+mlruns_ci/
+mlruns_docker/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+data/

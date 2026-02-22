@@ -7,6 +7,10 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 import mlflow
+import time, hashlib, json
+
+mlflow.set_tracking_uri("http://127.0.0.1:5000")
+mlflow.set_experiment("numerical-fragility-week1")
 
 from model import TinyNet
 from config import CONFIG_MATRIX
@@ -43,6 +47,7 @@ def train_one(cfg: dict) -> tuple[float, float]:
     precision = str(cfg["precision"])
     batch_size = int(cfg["batch_size"])
 
+    start_time = time.time()
     set_determinism(seed)
 
     dl = get_data(batch_size)
@@ -91,6 +96,10 @@ def train_one(cfg: dict) -> tuple[float, float]:
 
     avg_loss = total_loss / max(seen, 1)
     acc = correct / max(seen, 1)
+    elapsed = time.time() - start_time
+    mlflow.log_metric("train_time_sec", elapsed)
+    cfg_hash = hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()[:12]
+    mlflow.log_param("cfg_hash", cfg_hash)
     return avg_loss, acc
 
 
@@ -110,6 +119,7 @@ def main() -> None:
             mlflow.log_metric("train_acc", acc)
 
             print(run_name, "loss=", loss, "acc=", acc)
+    
 
 
 if __name__ == "__main__":
