@@ -112,9 +112,7 @@ def main() -> None:
         )
         with mlflow.start_run(run_name=run_name):
             mlflow.log_params(cfg)
-
             loss, acc = train_one(cfg)
-
             mlflow.log_metric("train_loss", loss)
             mlflow.log_metric("train_acc", acc)
 
