@@ -7,14 +7,20 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 import mlflow
-import time, hashlib, json
-
-mlflow.set_tracking_uri("http://127.0.0.1:5000")
-mlflow.set_experiment("numerical-fragility-week1")
-
+import time, hashlib, json, os
 from model import TinyNet
 from config import CONFIG_MATRIX
 
+# Use whatever the environment provides.
+# - Local dev: export MLFLOW_TRACKING_URI="http://127.0.0.1:5000"
+# - CI:        MLFLOW_TRACKING_URI="file:./mlruns_ci"
+tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "").strip()
+if tracking_uri:
+    mlflow.set_tracking_uri(tracking_uri)
+else:
+    mlflow.set_tracking_uri("file:./mlruns")  # safe fallback
+
+mlflow.set_experiment("numerical-fragility-week1")
 
 def set_determinism(seed: int) -> None:
     random.seed(seed)

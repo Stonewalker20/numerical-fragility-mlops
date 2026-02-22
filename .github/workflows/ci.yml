@@ -22,7 +22,7 @@ jobs:
         run: |
           python -c "import torch, mlflow, numpy; print('imports ok')"
 
-      - name: Run short training (no MLflow server in CI)
+      - name: Run short training (CI Local MLflow store)
         env:
           MLFLOW_TRACKING_URI: "file:./mlruns_ci"
         run: |
