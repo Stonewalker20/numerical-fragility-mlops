@@ -1,32 +1,55 @@
-CONFIG_MATRIX = [
-    {"seed": 42, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 43, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 44, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 45, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 46, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 47, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 48, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 49, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 50, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 51, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 52, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 53, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 54, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 55, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 56, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 57, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 58, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 59, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 60, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 61, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 62, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 63, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 64, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 65, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 66, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 67, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 68, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 69, "device": "cpu", "precision": "amp",  "batch_size": 128},
-    {"seed": 70, "device": "cpu", "precision": "fp32", "batch_size": 128},
-    {"seed": 71, "device": "cpu", "precision": "amp",  "batch_size": 128},
-]
+# src/config.py
+
+import random
+
+# -------------------------------
+# Controlled randomness
+# -------------------------------
+# This ensures that the randomly generated seeds
+# are reproducible across runs of the config file.
+random.seed(2026)
+
+NUM_SEEDS = 100
+SEEDS = random.sample(range(1, 10000), NUM_SEEDS)
+
+# Expanded batch size sweep
+BATCH_SIZES = [32, 64, 128, 256, 512]
+
+DEVICE = "cpu"
+PRECISION = "fp32"
+
+CONFIG_MATRIX = []
+
+# -------------------------------
+# Seed sweep (fixed batch size)
+# -------------------------------
+for s in SEEDS:
+    CONFIG_MATRIX.append(
+        {
+            "tag": "seed_sweep",
+            "seed": s,
+            "device": DEVICE,
+            "precision": PRECISION,
+            "batch_size": 128,
+        }
+    )
+
+# -------------------------------
+# Batch size sweep (fixed seed)
+# -------------------------------
+BASELINE_SEED = SEEDS[0]
+
+for bs in BATCH_SIZES:
+    CONFIG_MATRIX.append(
+        {
+            "tag": "batch_sweep",
+            "seed": BASELINE_SEED,
+            "device": DEVICE,
+            "precision": PRECISION,
+            "batch_size": bs,
+        }
+    )
+
+if __name__ == "__main__":
+    print("Generated SEEDS:", SEEDS)
+    print("Total configs:", len(CONFIG_MATRIX))
