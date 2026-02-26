@@ -1,7 +1,5 @@
 # src/config.py
-
 import random
-
 # -------------------------------
 # Controlled randomness
 # -------------------------------

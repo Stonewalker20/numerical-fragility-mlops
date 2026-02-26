@@ -9,3 +9,4 @@ __pycache__/
 .DS_Store
 mlflow_testrun.py
 artifacts/
+artifacts_structure.txt
