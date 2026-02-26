@@ -1,5 +1,4 @@
 # src/train.py
-import os, json
 import random
 import numpy as np
 import torch
@@ -7,7 +6,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 import mlflow
-import time, hashlib, json, os
+import time, hashlib, json, os, csv
+from pathlib import Path
 from model import TinyNet
 from config import CONFIG_MATRIX
 
@@ -214,9 +214,77 @@ def train_one(cfg: dict) -> tuple[float, float]:
     log_prediction_artifacts(cfg_hash, cfg, pred_fixed, logits_fixed, artifact_metrics)
     return avg_loss, acc
 
+def compute_cross_run_disagreement():
+    """
+    Compares prediction snapshots across runs.
+    Creates artifacts/comparisons_week2.csv
+    """
+    pred_root = Path("artifacts/predictions")
+    if not pred_root.exists():
+        print("No prediction artifacts found.")
+        return
+
+    cfg_map = {}
+    for cfg in CONFIG_MATRIX:
+        cfg_hash = hashlib.sha256(
+            json.dumps(cfg, sort_keys=True).encode()
+        ).hexdigest()[:12]
+        cfg_map[cfg_hash] = cfg
+
+    # Group by tag
+    grouped = {"seed_sweep": [], "batch_sweep": []}
+
+    for run_dir in pred_root.iterdir():
+        if run_dir.is_dir() and run_dir.name in cfg_map:
+            cfg = cfg_map[run_dir.name]
+            grouped[cfg["tag"]].append((run_dir.name, cfg))
+
+    results = []
+
+    for tag, runs in grouped.items():
+        if len(runs) < 2:
+            continue
+
+        # Sort deterministically
+        if tag == "seed_sweep":
+            runs = sorted(runs, key=lambda x: x[1]["seed"])
+        else:
+            runs = sorted(runs, key=lambda x: x[1]["batch_size"])
+
+        baseline_hash, baseline_cfg = runs[0]
+        baseline_pred = np.load(pred_root / baseline_hash / "pred.npy")
+
+        for other_hash, other_cfg in runs[1:]:
+            other_pred = np.load(pred_root / other_hash / "pred.npy")
+
+            disagree = float((baseline_pred != other_pred).mean())
+
+            results.append({
+                "sweep_type": tag,
+                "baseline_hash": baseline_hash,
+                "compare_hash": other_hash,
+                "baseline_seed": baseline_cfg["seed"],
+                "compare_seed": other_cfg["seed"],
+                "baseline_batch": baseline_cfg["batch_size"],
+                "compare_batch": other_cfg["batch_size"],
+                "disagreement_rate": disagree,
+            })
+
+    out_path = Path("artifacts/comparisons_week3.csv")
+    out_path.parent.mkdir(exist_ok=True)
+
+    with open(out_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=results[0].keys())
+        writer.writeheader()
+        writer.writerows(results)
+
+    print(f"Saved cross-run comparison to {out_path}")
+
+    # Log to MLflow (single artifact under current run)
+    mlflow.log_artifact(str(out_path))
 
 def main() -> None:
-    mlflow.set_experiment("numerical-fragility-week1")
+    mlflow.set_experiment("numerical-fragility-week3")
 
     for cfg in CONFIG_MATRIX:
         run_name = (
@@ -230,7 +298,7 @@ def main() -> None:
 
             print(run_name, "loss=", loss, "acc=", acc)
     
-
-
+    compute_cross_run_disagreement()
+    
 if __name__ == "__main__":
     main()

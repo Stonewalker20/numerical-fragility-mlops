@@ -7,7 +7,7 @@ import random
 # are reproducible across runs of the config file.
 random.seed(2026)
 
-NUM_SEEDS = 100
+NUM_SEEDS = 20
 SEEDS = random.sample(range(1, 10000), NUM_SEEDS)
 
 # Expanded batch size sweep
