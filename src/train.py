@@ -1,5 +1,5 @@
 # src/train.py
-import os
+import os, json
 import random
 import numpy as np
 import torch
@@ -46,6 +46,96 @@ def get_data(batch_size: int) -> DataLoader:
 
     return DataLoader(sub, batch_size=batch_size, shuffle=True, num_workers=0)
 
+def infer_fixed_eval(model, device: str, batch_size: int):
+    """
+    Runs inference on the fixed eval loader (same samples, same order).
+    Returns:
+      pred: (N,) predicted class indices
+      logits: (N, C) raw logits
+    """
+    model.eval()
+    dl = get_data(batch_size)
+
+    all_logits = []
+    all_pred = []
+
+    with torch.no_grad():
+        for x, _y in dl:
+            x = x.to(device)
+            logits = model(x)
+            all_logits.append(logits.detach().cpu())
+            all_pred.append(logits.argmax(dim=1).detach().cpu())
+
+    logits = torch.cat(all_logits, dim=0).numpy()
+    pred = torch.cat(all_pred, dim=0).numpy()
+    return pred, logits
+
+def stability_eval(model, device: str, batch_size: int, eps: float = 1e-3) -> tuple[float, float]:
+    """
+    Numerical stability signal via small input perturbation.
+
+    Computes:
+      - disagree_rate: fraction of argmax predictions that change between x and x+eps
+      - logit_var_mean: mean variance of logits across the two passes
+
+    Uses the same fixed eval set and order as infer_fixed_eval (via get_eval_data).
+    """
+    model.eval()
+    dl = get_data(batch_size)
+
+    all_logits_a = []
+    all_logits_b = []
+    all_pred_a = []
+    all_pred_b = []
+
+    with torch.no_grad():
+        for x, _y in dl:
+            x = x.to(device)
+
+            logits_a = model(x)
+
+            x_pert = (x + eps).clamp(0.0, 1.0)
+            logits_b = model(x_pert)
+
+            all_logits_a.append(logits_a.detach().cpu())
+            all_logits_b.append(logits_b.detach().cpu())
+
+            all_pred_a.append(logits_a.argmax(dim=1).detach().cpu())
+            all_pred_b.append(logits_b.argmax(dim=1).detach().cpu())
+
+    logits_a = torch.cat(all_logits_a, dim=0).numpy()  # (N, C)
+    logits_b = torch.cat(all_logits_b, dim=0).numpy()
+    pred_a = torch.cat(all_pred_a, dim=0).numpy()      # (N,)
+    pred_b = torch.cat(all_pred_b, dim=0).numpy()
+
+    disagree_rate = float((pred_a != pred_b).mean())
+
+    stack = np.stack([logits_a, logits_b], axis=0)  # (2, N, C)
+    logit_var_mean = float(np.var(stack, axis=0).mean())
+
+    return disagree_rate, logit_var_mean
+
+def log_prediction_artifacts(cfg_hash: str, cfg: dict, pred: np.ndarray, logits: np.ndarray, metrics: dict):
+    """
+    Writes local artifacts under artifacts/predictions/<cfg_hash>/ and logs them to MLflow.
+    """
+    run_dir = os.path.join("artifacts", "predictions", cfg_hash)
+    os.makedirs(run_dir, exist_ok=True)
+
+    np.save(os.path.join(run_dir, "pred.npy"), pred)
+    np.save(os.path.join(run_dir, "logits.npy"), logits)
+
+    summary = {
+        "cfg_hash": cfg_hash,
+        "cfg": cfg,
+        "n_eval": int(pred.shape[0]),
+        "metrics": metrics,
+    }
+    with open(os.path.join(run_dir, "summary.json"), "w") as f:
+        json.dump(summary, f, indent=2)
+
+    # Log the whole directory to MLflow
+    mlflow.log_artifacts(run_dir, artifact_path=f"predictions/{cfg_hash}")
 
 def train_one(cfg: dict) -> tuple[float, float]:
     seed = int(cfg["seed"])
@@ -103,9 +193,25 @@ def train_one(cfg: dict) -> tuple[float, float]:
     avg_loss = total_loss / max(seen, 1)
     acc = correct / max(seen, 1)
     elapsed = time.time() - start_time
-    mlflow.log_metric("train_time_sec", elapsed)
+    mlflow.log_metric("train_seconds", elapsed)
     cfg_hash = hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()[:12]
     mlflow.log_param("cfg_hash", cfg_hash)
+    
+    disagree_rate, logit_var_mean = stability_eval(model, device, batch_size, eps=1e-3)
+    mlflow.log_metric("stability_disagree_rate_eps1e-3", disagree_rate)
+    mlflow.log_metric("stability_logit_var_mean_eps1e-3", logit_var_mean)
+
+    pred_fixed, logits_fixed = infer_fixed_eval(model, device, batch_size)
+
+    artifact_metrics = {
+        "train_loss": float(avg_loss),
+        "train_acc": float(acc),
+        "train_seconds": float(elapsed),
+        "stability_disagree_rate_eps1e-3": float(disagree_rate),
+        "stability_logit_var_mean_eps1e-3": float(logit_var_mean),
+    }
+
+    log_prediction_artifacts(cfg_hash, cfg, pred_fixed, logits_fixed, artifact_metrics)
     return avg_loss, acc
 
 
