@@ -1,104 +1,172 @@
 # Correct but Fragile
 
-### Numerical Stability Risks in Machine Learning Systems
+## Numerical Stability Risks in Machine Learning Systems
 
-**Author:** Cordell Stonecipher
-
----
-
-## Overview
-
-Machine learning systems are commonly evaluated using accuracy and loss metrics. While these confirm functional correctness, they do not guarantee numerical robustness, reproducibility, or deployment reliability.
-
-This project investigates how machine learning models that appear correct can still exhibit fragile numerical behavior under realistic operational conditions such as:
-
-* Hardware changes (CPU vs GPU)
-* Precision changes (FP32 vs AMP)
-* Batch size variation
-* Controlled input perturbations
-* Seed variation
-
-The objective is to treat numerical instability as an **operational reliability issue**, not merely a modeling concern.
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-success)
+![MLflow](https://img.shields.io/badge/Tracking-MLflow-blue)
+![DVC](https://img.shields.io/badge/Data%20Versioning-DVC-purple)
+![PyTorch](https://img.shields.io/badge/Framework-PyTorch-red)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
 
-## Research Focus
+## Executive Summary
 
-This repository implements a controlled ML pipeline that:
+This project explores a critical reliability question in modern machine learning systems:
 
-1. Fixes dataset, architecture, and hyperparameters.
-2. Executes training under explicit configuration matrices.
-3. Tracks experiments using MLflow (SQLAlchemy backend).
-4. Versions datasets and artifacts with DVC.
-5. Logs stability metrics beyond accuracy.
-6. Enables CI-style reproducibility testing.
+> Can a model be correct yet operationally fragile?
 
-The goal is to demonstrate that a model may maintain stable accuracy while exhibiting measurable numerical fragility.
+While traditional evaluation focuses on accuracy and loss, this system quantifies **numerical instability and prediction drift under operational perturbations** such as random seed variation and batch size changes.
+
+The result is a reproducible ML pipeline that treats numerical behavior as a first-class reliability signal — aligning machine learning with DevOps and AIOps principles.
 
 ---
 
-## Architecture
+## Why This Matters
 
-Dataset → Preprocessing → Training → Stability Evaluation → Experiment Tracking → CI Validation
+In production systems:
 
-Core components:
+* Small configuration changes can alter predictions.
+* Hardware or precision differences can introduce silent drift.
+* CI pipelines validate correctness but rarely validate stability.
 
-* **PyTorch** – Model implementation and controlled precision execution
-* **MLflow (SQLAlchemy backend)** – Experiment tracking and artifact management
-* **DVC** – Dataset versioning and artifact traceability
-* **Git / GitHub Actions** – CI-based reproducibility checks
-* **Docker** – Environment standardization
+This project demonstrates how to:
 
----
-
-## Numerical Stability Metrics (Week 1)
-
-Beyond accuracy and loss, the pipeline logs:
-
-* `stability_disagree_rate_eps1e-3`
-  Fraction of predictions that change under small input perturbations.
-
-* `stability_logit_var_mean_eps1e-3`
-  Mean variance of model logits under perturbation.
-
-* `train_seconds`
-  Runtime variability signal.
-
-* `cfg_hash`
-  Configuration fingerprint for reproducibility verification.
-
-These metrics quantify sensitivity to small numerical changes — a proxy for operational fragility.
+* Detect prediction-level drift.
+* Measure reproducibility gaps.
+* Log numerical behavior as an operational signal.
+* Prepare models for stability gating in CI environments.
 
 ---
 
-## Repository Structure
+## Technical Highlights
+
+### Deterministic Reproducibility Controls
+
+* Controlled random seeds
+* `torch.use_deterministic_algorithms`
+* Fixed evaluation subset
+* Config hashing for traceability
+
+---
+
+### Stability Metrics
+
+#### 1. Perturbation Sensitivity (Within-Run)
+
+Small numerical perturbation:
+
+[
+x' = x + \epsilon
+]
+
+Metrics logged:
+
+* Prediction disagreement rate
+* Mean logit variance
+
+---
+
+#### 2. Cross-Run Reproducibility Drift (Between-Run)
+
+Sweeps across:
+
+* Random seeds
+* Batch sizes
+
+For each sweep:
+
+[
+\text{Disagreement} =
+\frac{1}{N}\sum_{i=1}^{N}
+\mathbf{1}(\hat{y}*{baseline} \neq \hat{y}*{compare})
+]
+
+Outputs exported to:
 
 ```
-numerical-fragility-mlops/
-│
-├── data/
-│   └── raw/                 # Tracked via DVC
-│
-├── src/
-│   ├── train.py             # Training + logging + stability metrics
-│   ├── model.py             # TinyNet architecture
-│   ├── stability.py         # Stability metric utilities
-│   └── config.py            # Configuration matrix
-│
-├── .github/workflows/
-│   └── ci.yml               # CI workflow
-│
-├── Dockerfile
-├── requirements.txt
-├── dvc.yaml
-└── README.md
+artifacts/comparisons_week2.csv
 ```
+
+This quantifies prediction drift even when accuracy remains stable.
 
 ---
 
-## Setup Instructions
+## Architecture Overview
 
-### 1. Install dependencies
+```
+src/
+ ├── model.py
+ ├── train.py
+ ├── config.py
+ └── stability logic
+
+artifacts/
+ └── predictions/
+       └── <cfg_hash>/
+            ├── pred.npy
+            ├── logits.npy
+            └── summary.json
+```
+
+### Tooling Stack
+
+* **PyTorch** — deterministic model training
+* **MLflow** — experiment + artifact tracking
+* **DVC** — dataset version control
+* **GitHub Actions** — clean-room validation
+* **Docker** — environment reproducibility foundation
+
+---
+
+## Key Engineering Features
+
+### Artifact-Backed Experimentation
+
+Each run stores:
+
+```
+artifacts/predictions/<cfg_hash>/
+ ├── pred.npy
+ ├── logits.npy
+ └── summary.json
+```
+
+This enables:
+
+* Offline reproducibility checks
+* Cross-run comparison without retraining
+* Auditable experiment lineage
+
+---
+
+### Operational Perturbation Matrix
+
+The configuration sweep includes:
+
+* Randomized (reproducible) seed sweep
+* Expanded batch size sweep
+* Deterministic baseline selection
+
+This simulates real-world configuration drift scenarios.
+
+---
+
+### CI-Ready Stability Infrastructure
+
+The system is structured to support:
+
+* Stability thresholds
+* Build gating on numerical drift
+* Environment-agnostic tracking backends
+
+Future integration can fail CI when instability exceeds tolerance.
+
+---
+
+## Running the Project
+
+### Install Dependencies
 
 ```
 pip install -r requirements.txt
@@ -106,104 +174,81 @@ pip install -r requirements.txt
 
 ---
 
-### 2. Start MLflow Server (SQLAlchemy backend)
-
-```
-mlflow server \
-  --backend-store-uri sqlite:///mlflow.db \
-  --default-artifact-root ./mlartifacts \
-  --host 127.0.0.1 \
-  --port 5000
-```
-
-In another terminal:
-
-```
-export MLFLOW_TRACKING_URI="http://127.0.0.1:5000"
-```
-
----
-
-### 3. Run Training
+### Execute Training Sweep
 
 ```
 python src/train.py
 ```
 
-Open browser:
+This will:
+
+* Execute configuration matrix
+* Log MLflow experiments
+* Save prediction artifacts
+* Compute cross-run disagreement
+* Export comparison CSV
+
+---
+
+### Launch MLflow UI
+
+```
+export MLFLOW_TRACKING_URI="sqlite:///mlflow.db"
+mlflow ui
+```
+
+Open:
 
 ```
 http://127.0.0.1:5000
 ```
 
-You should see experiment runs with stability metrics logged.
+---
+
+## Results Interpretation
+
+Key insight observed:
+
+* Accuracy remains relatively stable across seeds and batch sizes.
+* Prediction-level disagreement is non-zero.
+* Numerical perturbations introduce measurable instability.
+* Correctness alone does not capture operational robustness.
 
 ---
 
-## CI Integration
+## Professional Value
 
-The GitHub Actions workflow:
+This project demonstrates:
 
-* Installs dependencies
-* Runs a short baseline training
-* Ensures reproducibility
-* Validates pipeline execution
+* Systems-level thinking in ML engineering
+* Experiment reproducibility best practices
+* CI-aligned reliability mindset
+* Artifact-based experiment design
+* Quantitative drift analysis
+* ML observability implementation
 
-This enables automated regression checks for numerical stability.
+It bridges:
 
----
-
-## DVC Dataset Versioning
-
-Dataset snapshots are tracked via DVC:
-
-```
-dvc add data/raw
-git add data/raw.dvc
-git commit -m "Track dataset snapshot"
-```
-
-This ensures dataset state is tied to specific Git commits.
+Machine Learning
+DevOps
+Reliability Engineering
+AIOps
 
 ---
 
-## Reproducibility Goals (Next Phases)
+## Future Extensions
 
-Planned extensions include:
-
-* Multi-seed reproducibility matrix
-* CPU vs GPU comparison
-* FP32 vs AMP stability comparison
-* Batch size sensitivity analysis
-* CI gates based on stability thresholds
-* Cross-environment Docker validation
+* CPU vs GPU reproducibility comparison
+* FP32 vs AMP precision sensitivity
+* CI stability gating thresholds
+* Gradient instability tracking
+* Drift visualization dashboards
+* Model registry stability metadata
 
 ---
 
-## Why This Matters
+## Author
 
-In production environments, silent numerical instability can lead to:
-
-* Non-deterministic predictions
-* Reproducibility gaps
-* Deployment drift
-* Model disagreement across hardware
-
-Accuracy alone does not capture these risks.
-
-This project reframes numerical behavior as an **AI operations reliability concern**.
-
----
-
-## Status
-
-Week 1 Complete:
-
-* Deterministic baseline model
-* MLflow SQLAlchemy backend
-* DVC dataset versioning
-* Stability metrics logging
-* CI pipeline stub
-* Docker reproducibility stub
-
----
+Cordell Stonecipher
+Machine Learning Engineer
+Oakland University
