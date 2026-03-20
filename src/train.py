@@ -12,21 +12,23 @@ from model import TinyNet
 from config import CONFIG_MATRIX
 
 # Use whatever the environment provides.
-# - Local dev: export MLFLOW_TRACKING_URI="http://127.0.0.1:5000"
-# - CI:        MLFLOW_TRACKING_URI="file:./mlruns_ci"
+# - Local dev: export MLFLOW_TRACKING_URI="sqlite:///mlflow.db"
+# - Remote:    export MLFLOW_TRACKING_URI="http://127.0.0.1:5000"
+# - CI:        MLFLOW_TRACKING_URI="sqlite:///mlflow_ci.db"
 tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "").strip()
 if tracking_uri:
     mlflow.set_tracking_uri(tracking_uri)
 else:
-    mlflow.set_tracking_uri("file:./mlruns")  # safe fallback
+    mlflow.set_tracking_uri("sqlite:///mlflow.db")  # safe local fallback
 
 MAX_PERTURB_DISAGREE = float(os.getenv("MAX_PERTURB_DISAGREE", "0.05"))
 _max_cross_run_disagree = os.getenv("MAX_CROSS_RUN_DISAGREE")
 MAX_CROSS_RUN_DISAGREE = (
     float(_max_cross_run_disagree) if _max_cross_run_disagree is not None else None
 )
+PRECISION_SORT_ORDER = {"fp32": 0, "amp": 1}
 
-mlflow.set_experiment("numerical-fragility-week1")
+mlflow.set_experiment("numerical-fragility")
 
 def set_determinism(seed: int) -> None:
     random.seed(seed)
@@ -227,7 +229,7 @@ def train_one(cfg: dict) -> tuple[float, float]:
 def compute_cross_run_disagreement():
     """
     Compares prediction snapshots across runs.
-    Creates artifacts/comparisons_week2.csv
+    Creates artifacts/comparisons_week#.csv
     """
     pred_root = Path("artifacts/predictions")
     if not pred_root.exists():
@@ -242,7 +244,7 @@ def compute_cross_run_disagreement():
         cfg_map[cfg_hash] = cfg
 
     # Group by tag
-    grouped = {"seed_sweep": [], "batch_sweep": []}
+    grouped = {"seed_sweep": [], "batch_sweep": [], "precision_sweep": []}
 
     for run_dir in pred_root.iterdir():
         if run_dir.is_dir() and run_dir.name in cfg_map:
@@ -259,6 +261,11 @@ def compute_cross_run_disagreement():
         # Sort deterministically
         if tag == "seed_sweep":
             runs = sorted(runs, key=lambda x: x[1]["seed"])
+        elif tag == "precision_sweep":
+            runs = sorted(
+                runs,
+                key=lambda x: PRECISION_SORT_ORDER.get(x[1]["precision"], len(PRECISION_SORT_ORDER)),
+            )
         else:
             runs = sorted(runs, key=lambda x: x[1]["batch_size"])
 
@@ -279,10 +286,12 @@ def compute_cross_run_disagreement():
                 "compare_seed": other_cfg["seed"],
                 "baseline_batch": baseline_cfg["batch_size"],
                 "compare_batch": other_cfg["batch_size"],
+                "baseline_precision": baseline_cfg["precision"],
+                "compare_precision": other_cfg["precision"],
                 "disagreement_rate": disagree,
             })
 
-    out_path = Path("artifacts/comparisons_week3.csv")
+    out_path = Path("artifacts/comparisons_week4.csv")
     out_path.parent.mkdir(exist_ok=True)
 
     with open(out_path, "w", newline="") as f:
@@ -301,7 +310,7 @@ def compute_cross_run_disagreement():
         )
 
 def main() -> None:
-    mlflow.set_experiment("numerical-fragility-week3")
+    mlflow.set_experiment("numerical-fragility-week4")
 
     for cfg in CONFIG_MATRIX:
         run_name = (

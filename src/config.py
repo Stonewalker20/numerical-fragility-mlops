@@ -1,5 +1,7 @@
-# src/config.py
 import random
+import torch
+
+# src/config.py
 # -------------------------------
 # Controlled randomness
 # -------------------------------
@@ -15,6 +17,7 @@ BATCH_SIZES = [32, 64, 128, 256, 512]
 
 DEVICE = "cpu"
 PRECISION = "fp32"
+PRECISION_ORDER = ["fp32", "amp"]
 
 CONFIG_MATRIX = []
 
@@ -47,6 +50,22 @@ for bs in BATCH_SIZES:
             "batch_size": bs,
         }
     )
+
+# -------------------------------
+# Precision sweep (GPU-only)
+# -------------------------------
+# AMP is only meaningfully enabled in train.py for CUDA runs.
+if torch.cuda.is_available():
+    for precision in PRECISION_ORDER:
+        CONFIG_MATRIX.append(
+            {
+                "tag": "precision_sweep",
+                "seed": BASELINE_SEED,
+                "device": "cuda",
+                "precision": precision,
+                "batch_size": 128,
+            }
+        )
 
 if __name__ == "__main__":
     print("Generated SEEDS:", SEEDS)

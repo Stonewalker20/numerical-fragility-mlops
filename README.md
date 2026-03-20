@@ -16,7 +16,7 @@ This project explores a critical reliability question in modern machine learning
 
 > Can a model be correct yet operationally fragile?
 
-While traditional evaluation focuses on accuracy and loss, this system quantifies **numerical instability and prediction drift under operational perturbations** such as random seed variation and batch size changes.
+While traditional evaluation focuses on accuracy and loss, this system quantifies **numerical instability and prediction drift under operational perturbations** such as random seed variation, batch size changes, and precision mode differences.
 
 The result is a reproducible ML pipeline that treats numerical behavior as a first-class reliability signal — aligning machine learning with DevOps and AIOps principles.
 
@@ -35,7 +35,7 @@ This project demonstrates how to:
 * Detect prediction-level drift.
 * Measure reproducibility gaps.
 * Log numerical behavior as an operational signal.
-* Prepare models for stability gating in CI environments.
+* Enforce selected stability checks inside CI environments.
 
 ---
 
@@ -65,6 +65,13 @@ Metrics logged:
 * Prediction disagreement rate
 * Mean logit variance
 
+The training run can fail immediately when perturbation disagreement exceeds
+the configured threshold:
+
+```
+MAX_PERTURB_DISAGREE
+```
+
 ---
 
 #### 2. Cross-Run Reproducibility Drift (Between-Run)
@@ -73,6 +80,7 @@ Sweeps across:
 
 * Random seeds
 * Batch sizes
+* Precision mode (`fp32` vs `amp`, when CUDA is available)
 
 For each sweep:
 
@@ -85,10 +93,19 @@ For each sweep:
 Outputs exported to:
 
 ```
-artifacts/comparisons_week2.csv
+artifacts/comparisons_week4.csv
 ```
 
 This quantifies prediction drift even when accuracy remains stable.
+
+Cross-run gating is also supported through:
+
+```
+MAX_CROSS_RUN_DISAGREE
+```
+
+This gate is opt-in so that configuration sweeps can be observed without
+forcing all intentionally different runs to satisfy the same tolerance.
 
 ---
 
@@ -102,6 +119,10 @@ src/
  └── stability logic
 
 artifacts/
+ ├── comparisons_week4.csv
+ ├── seed_disagreement.png
+ ├── batch_disagreement.png
+ ├── precision_disagreement.png
  └── predictions/
        └── <cfg_hash>/
             ├── pred.npy
@@ -137,6 +158,7 @@ This enables:
 * Offline reproducibility checks
 * Cross-run comparison without retraining
 * Auditable experiment lineage
+* Plot generation directly from saved comparison artifacts
 
 ---
 
@@ -146,6 +168,7 @@ The configuration sweep includes:
 
 * Randomized (reproducible) seed sweep
 * Expanded batch size sweep
+* GPU precision sweep for `fp32` vs `amp`
 * Deterministic baseline selection
 
 This simulates real-world configuration drift scenarios.
@@ -156,11 +179,13 @@ This simulates real-world configuration drift scenarios.
 
 The system is structured to support:
 
-* Stability thresholds
+* Perturbation stability thresholds
+* Optional cross-run gating
 * Build gating on numerical drift
-* Environment-agnostic tracking backends
+* SQLite-backed local and CI experiment tracking
 
-Future integration can fail CI when instability exceeds tolerance.
+The CI workflow currently enforces perturbation stability while leaving
+cross-run drift available as an explicit policy choice.
 
 ---
 
@@ -188,6 +213,42 @@ This will:
 * Compute cross-run disagreement
 * Export comparison CSV
 
+By default, local runs use:
+
+```
+sqlite:///mlflow.db
+```
+
+You can still override the backend explicitly with `MLFLOW_TRACKING_URI`.
+
+---
+
+### Stability Thresholds
+
+```
+export MAX_PERTURB_DISAGREE="0.05"
+export MAX_CROSS_RUN_DISAGREE="0.10"
+python src/train.py
+```
+
+`MAX_PERTURB_DISAGREE` is active by default.
+`MAX_CROSS_RUN_DISAGREE` is optional and is best used for tightly controlled
+like-for-like comparisons rather than broad exploratory sweeps.
+
+---
+
+### Generate Plots
+
+```
+python src/plot_results.py
+```
+
+This writes:
+
+* `artifacts/seed_disagreement.png`
+* `artifacts/batch_disagreement.png`
+* `artifacts/precision_disagreement.png` when a GPU precision sweep is present
+
 ---
 
 ### Launch MLflow UI
@@ -210,8 +271,10 @@ http://127.0.0.1:5000
 Key insight observed:
 
 * Accuracy remains relatively stable across seeds and batch sizes.
+* Precision changes can also induce prediction drift when AMP is enabled.
 * Prediction-level disagreement is non-zero.
 * Numerical perturbations introduce measurable instability.
+* Stability thresholds turn those signals into enforceable engineering policy.
 * Correctness alone does not capture operational robustness.
 
 ---
@@ -239,8 +302,7 @@ AIOps
 ## Future Extensions
 
 * CPU vs GPU reproducibility comparison
-* FP32 vs AMP precision sensitivity
-* CI stability gating thresholds
+* CI gating tuned to hardware-specific precision sweeps
 * Gradient instability tracking
 * Drift visualization dashboards
 * Model registry stability metadata
