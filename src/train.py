@@ -1,5 +1,6 @@
 # src/train.py
 import random
+from itertools import combinations
 import numpy as np
 import torch
 import torch.nn as nn
@@ -269,11 +270,14 @@ def compute_cross_run_disagreement():
         else:
             runs = sorted(runs, key=lambda x: x[1]["batch_size"])
 
-        baseline_hash, baseline_cfg = runs[0]
-        baseline_pred = np.load(pred_root / baseline_hash / "pred.npy")
+        pred_cache = {
+            run_hash: np.load(pred_root / run_hash / "pred.npy")
+            for run_hash, _cfg in runs
+        }
 
-        for other_hash, other_cfg in runs[1:]:
-            other_pred = np.load(pred_root / other_hash / "pred.npy")
+        for (baseline_hash, baseline_cfg), (other_hash, other_cfg) in combinations(runs, 2):
+            baseline_pred = pred_cache[baseline_hash]
+            other_pred = pred_cache[other_hash]
 
             disagree = float((baseline_pred != other_pred).mean())
             max_disagree = max(max_disagree, disagree)
