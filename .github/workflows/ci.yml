@@ -24,7 +24,8 @@ jobs:
 
       - name: Run short training (CI Local MLflow store)
         env:
-          MLFLOW_TRACKING_URI: "file:./mlruns_ci"
+          MLFLOW_TRACKING_URI: "sqlite:///mlflow_ci.db"
+          MAX_PERTURB_DISAGREE: "0.05"
+          MAX_CROSS_RUN_DISAGREE: "0.05"
         run: |
           python src/train.py
-

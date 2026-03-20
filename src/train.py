@@ -20,6 +20,9 @@ if tracking_uri:
 else:
     mlflow.set_tracking_uri("file:./mlruns")  # safe fallback
 
+MAX_PERTURB_DISAGREE = float(os.getenv("MAX_PERTURB_DISAGREE", "0.05"))
+MAX_CROSS_RUN_DISAGREE = float(os.getenv("MAX_CROSS_RUN_DISAGREE", "0.05"))
+
 mlflow.set_experiment("numerical-fragility-week1")
 
 def set_determinism(seed: int) -> None:
@@ -199,6 +202,10 @@ def train_one(cfg: dict) -> tuple[float, float]:
     
     disagree_rate, logit_var_mean = stability_eval(model, device, batch_size, eps=1e-3)
     mlflow.log_metric("stability_disagree_rate_eps1e-3", disagree_rate)
+    if disagree_rate > MAX_PERTURB_DISAGREE:
+        raise RuntimeError(
+            f"[FAIL] Perturbation instability too high: {disagree_rate:.4f} > {MAX_PERTURB_DISAGREE}"
+        )
     mlflow.log_metric("stability_logit_var_mean_eps1e-3", logit_var_mean)
 
     pred_fixed, logits_fixed = infer_fixed_eval(model, device, batch_size)
@@ -240,6 +247,7 @@ def compute_cross_run_disagreement():
             grouped[cfg["tag"]].append((run_dir.name, cfg))
 
     results = []
+    max_disagree = 0.0
 
     for tag, runs in grouped.items():
         if len(runs) < 2:
@@ -258,6 +266,7 @@ def compute_cross_run_disagreement():
             other_pred = np.load(pred_root / other_hash / "pred.npy")
 
             disagree = float((baseline_pred != other_pred).mean())
+            max_disagree = max(max_disagree, disagree)
 
             results.append({
                 "sweep_type": tag,
@@ -282,6 +291,11 @@ def compute_cross_run_disagreement():
 
     # Log to MLflow (single artifact under current run)
     mlflow.log_artifact(str(out_path))
+
+    if max_disagree > MAX_CROSS_RUN_DISAGREE:
+        raise RuntimeError(
+            f"[FAIL] Max cross-run instability {max_disagree:.4f} exceeds threshold {MAX_CROSS_RUN_DISAGREE}"
+        )
 
 def main() -> None:
     mlflow.set_experiment("numerical-fragility-week3")
