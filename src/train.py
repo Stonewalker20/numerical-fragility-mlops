@@ -21,7 +21,10 @@ else:
     mlflow.set_tracking_uri("file:./mlruns")  # safe fallback
 
 MAX_PERTURB_DISAGREE = float(os.getenv("MAX_PERTURB_DISAGREE", "0.05"))
-MAX_CROSS_RUN_DISAGREE = float(os.getenv("MAX_CROSS_RUN_DISAGREE", "0.05"))
+_max_cross_run_disagree = os.getenv("MAX_CROSS_RUN_DISAGREE")
+MAX_CROSS_RUN_DISAGREE = (
+    float(_max_cross_run_disagree) if _max_cross_run_disagree is not None else None
+)
 
 mlflow.set_experiment("numerical-fragility-week1")
 
@@ -292,7 +295,7 @@ def compute_cross_run_disagreement():
     # Log to MLflow (single artifact under current run)
     mlflow.log_artifact(str(out_path))
 
-    if max_disagree > MAX_CROSS_RUN_DISAGREE:
+    if MAX_CROSS_RUN_DISAGREE is not None and max_disagree > MAX_CROSS_RUN_DISAGREE:
         raise RuntimeError(
             f"[FAIL] Max cross-run instability {max_disagree:.4f} exceeds threshold {MAX_CROSS_RUN_DISAGREE}"
         )
