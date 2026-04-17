@@ -194,7 +194,14 @@ cross-run drift available as an explicit policy choice.
 ### Install Dependencies
 
 ```
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
+```
+
+Or with Conda:
+
+```
+conda env create -f environment.yml
+conda activate numerical-fragility-mlops
 ```
 
 ---
@@ -202,7 +209,7 @@ pip install -r requirements.txt
 ### Execute Training Sweep
 
 ```
-python src/train.py
+python3 src/train.py
 ```
 
 This will:
@@ -228,7 +235,7 @@ You can still override the backend explicitly with `MLFLOW_TRACKING_URI`.
 ```
 export MAX_PERTURB_DISAGREE="0.05"
 export MAX_CROSS_RUN_DISAGREE="0.10"
-python src/train.py
+python3 src/train.py
 ```
 
 `MAX_PERTURB_DISAGREE` is active by default.
@@ -240,14 +247,53 @@ like-for-like comparisons rather than broad exploratory sweeps.
 ### Generate Plots
 
 ```
-python src/plot_results.py
+python3 src/plot_results.py
 ```
 
 This writes:
 
 * `artifacts/seed_disagreement.png`
 * `artifacts/batch_disagreement.png`
+* `artifacts/device_disagreement.png` when a CUDA-backed device sweep is present
 * `artifacts/precision_disagreement.png` when a GPU precision sweep is present
+
+### Generate Summary Tables
+
+```
+python3 src/generate_results_table.py
+```
+
+This writes:
+
+* `artifacts/results_summary_table.csv`
+* `artifacts/results_summary_table.md`
+* `artifacts/results_detail_table.csv`
+* `artifacts/results_detail_table.md`
+
+### Reproduce With DVC
+
+```
+dvc repro
+```
+
+This runs the training sweep, regenerates plots, and refreshes the summary tables.
+
+### Generate CUDA Device / Precision Data
+
+On a CUDA-enabled machine, run:
+
+```bash
+RUN_MODE=gpu_only python3 src/train.py
+python3 src/plot_results.py
+python3 src/generate_results_table.py
+```
+
+This adds:
+
+* `device_sweep` comparisons for CPU vs CUDA in `artifacts/comparisons_week4.csv`
+* `precision_sweep` comparisons for `fp32` vs `amp`
+* `artifacts/device_disagreement.png`
+* `artifacts/precision_disagreement.png`
 
 ---
 

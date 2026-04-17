@@ -1,9 +1,32 @@
 stages:
   train:
-    cmd: python -c "from pathlib import Path; Path('artifacts').mkdir(exist_ok=True);
-      Path('artifacts/model.txt').write_text('week1')"
+    cmd: python3 src/train.py
     deps:
-    - data/raw
-    - src/train.py
+      - src/config.py
+      - src/model.py
+      - src/train.py
+      - data/raw.dvc
     outs:
-    - artifacts/model.txt
+      - artifacts/comparisons_week4.csv
+      - artifacts/predictions
+
+  plots:
+    cmd: python3 src/plot_results.py
+    deps:
+      - src/plot_results.py
+      - artifacts/comparisons_week4.csv
+    outs:
+      - artifacts/seed_disagreement.png
+      - artifacts/batch_disagreement.png
+
+  summary_tables:
+    cmd: python3 src/generate_results_table.py
+    deps:
+      - src/generate_results_table.py
+      - artifacts/comparisons_week4.csv
+      - artifacts/predictions
+    outs:
+      - artifacts/results_summary_table.csv
+      - artifacts/results_summary_table.md
+      - artifacts/results_detail_table.csv
+      - artifacts/results_detail_table.md
