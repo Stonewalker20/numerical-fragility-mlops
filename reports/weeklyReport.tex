@@ -1,0 +1,500 @@
+% ============================================================
+% CSI4150 Bi-Weekly Progress Report Template
+% - Matches "proposal-style" clean article layout + fancyhdr
+% - Most recent report goes FIRST (add new blocks at top)
+% - Screenshots live in: screenshots/
+% ============================================================
+
+\documentclass[11pt]{article}
+
+% ---------- Layout / Font (proposal-like) ----------
+\usepackage[margin=0.9in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern} % clean, modern font; comment out if you want default Computer Modern
+% If your proposal used Times-like font instead, swap the line above for:
+% \usepackage{newtxtext,newtxmath}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+% ---------- Figures / Tables ----------
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{amsmath}
+
+% ---------- Code formatting ----------
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codegray}{gray}{0.95}
+\definecolor{commentgreen}{rgb}{0,0.5,0}
+\definecolor{keywordblue}{rgb}{0,0,0.6}
+
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    backgroundcolor=\color{codegray},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{keywordblue}\bfseries,
+    commentstyle=\color{commentgreen},
+    stringstyle=\color{red},
+    breaklines=true,
+    frame=single,
+    tabsize=2,
+    showstringspaces=false
+}
+
+% ---------- Links ----------
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Section spacing (proposal-ish tightness) ----------
+\usepackage{titlesec}
+\titlespacing*{\section}{0pt}{6pt}{4pt}
+\titlespacing*{\subsection}{0pt}{4pt}{2pt}
+
+% ---------- Fancy headers/footers ----------
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\setlength{\headheight}{14pt}
+
+\pagestyle{fancy}
+\fancyhf{} % clear
+
+% Header: left / center / right
+\lhead{\textbf{CSI 4150 -- AI for IT Operations}}
+\rhead{\textbf{Cordell Stonecipher}}
+
+% Footer: left / center / right
+\lfoot{\textbf{Correct but Fragile: Numerical Stability Risks in ML Systems}}
+\cfoot{}
+\rfoot{\textbf{Page \thepage\ of \pageref{LastPage}}}
+
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% ---------- Screenshot path ----------
+\graphicspath{{screenshots/}}
+
+
+
+% ---------- Small helper macros ----------
+\newcommand{\reportblock}[2]{%
+  \section*{#1}%
+  \vspace{2pt}\hrule\vspace{6pt}
+}
+
+\newcommand{\shot}[2]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{#1}
+    \caption{#2}
+  \end{figure}
+}
+
+% ============================================================
+\begin{document}
+
+% ---------- Title (proposal-style) ----------
+\begin{center}
+  {\LARGE \textbf{Bi-Weekly Progress Reports}}\\[4pt]
+  {\large \textbf{Correct but Fragile: Numerical Stability Risks in Machine Learning Systems}}\\[6pt]
+  {\large Cordell Stonecipher}\\
+  {\large CSI 4150 -- AI for IT Operations}\\
+  {\large \today}
+\end{center}
+
+
+\vspace{6pt}
+\hrule
+\vspace{10pt}
+
+% ============================================================
+% IMPORTANT:
+% Put the MOST RECENT report FIRST.
+% For the next bi-weekly submission, copy the newest block,
+% paste it ABOVE older reports, and update screenshots.
+% ============================================================
+% ============================================================
+% REPORT #5 (MOST RECENT)
+% Milestone 5: Final Analysis and Visualization (Week 8)
+% ============================================================
+\reportblock{Bi-Weekly Report 5 (Week 9 -- Milestone 5)}
+
+\subsection*{Objective}
+Complete the end-to-end reliability pipeline and finalize the project’s experimental framework. This milestone closes the loop on the validation campaign by consolidating completed CPU seed, batch, and preprocessing experiments, adding gradient norm tracking to the reporting workflow, and incorporating a CUDA precision comparison into the final artifact set.
+
+\subsection*{Implemented Components}
+\begin{itemize}
+  \item Completed the final experiment matrix across:
+    \begin{itemize}
+      \item Seed variation
+      \item Batch size variation
+      \item Preprocessing-order variation
+      \item Gradient norm logging and summary generation
+      \item CUDA precision comparison for \texttt{fp32} versus \texttt{amp}
+    \end{itemize}
+  \item Generated final plots and summary artifacts from the comparison CSV outputs.
+  \item Finalized the complete operational pipeline:
+    \begin{itemize}
+      \item Reproducibility
+      \item Stability measurement
+      \item Gradient norm tracking
+      \item Cross-run analysis
+      \item CI enforcement
+      \item Artifact reporting and final documentation
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Completed Validation Scope}
+Milestone 5 serves as the technical completion point for the project. The finalized system now supports and documents:
+\begin{itemize}
+  \item Deterministic CPU baseline runs
+  \item Preprocessing-order sweep with artifact-backed disagreement comparison
+  \item Gradient norm logging across training runs
+  \item CUDA-backed precision comparison for \texttt{fp32} and \texttt{amp}
+  \item Prediction-level comparison artifacts for post-hoc reproducibility analysis
+  \item CI threshold checks that turn instability into an enforceable engineering policy
+\end{itemize}
+
+\subsection*{Evidence (Screenshots)}
+
+\shot{images/seed_disagreement.png}{Prediction disagreement rate across seed sweep showing variability despite similar accuracy.}
+
+\shot{images/batch_disagreement.png}{Prediction disagreement rate across batch sizes demonstrating sensitivity to training configuration.}
+
+\shot{images/preprocessing_disagreement.png}{Prediction disagreement across preprocessing-order variants showing that input normalization order can change final predictions.}
+
+\shot{images/precision_disagreement.png}{Prediction disagreement between CUDA \texttt{fp32} and \texttt{amp} runs, showing that precision mode can change outputs even when aggregate accuracy is stable.}
+
+\shot{week7_ci_success.png}{Successful CI execution showing the completed reliability pipeline operating with stability checks enabled.}
+
+\subsection*{Key Findings}
+\begin{itemize}
+  \item Prediction outputs vary across seeds and batch sizes even when accuracy remains stable.
+  \item Preprocessing order introduces measurable prediction drift even under deterministic execution.
+  \item Precision mode should be treated as a reproducibility variable, not an implementation detail.
+  \item Gradient norm logging adds visibility into training-time numerical behavior beyond final accuracy.
+  \item Numerical instability is measurable and reproducible.
+  \item Perturbation-based instability provides a reliable CI gating signal.
+\end{itemize}
+
+\subsection*{Final System Capabilities}
+\begin{itemize}
+  \item Deterministic reproducible training pipeline
+  \item Numerical stability measurement (within-run)
+  \item Gradient norm telemetry during training
+  \item Cross-run reproducibility analysis
+  \item Artifact-backed experiment tracking
+  \item CPU sweep execution plus CUDA precision-aware evaluation
+  \item CI-based stability enforcement
+  \item Final reporting in both milestone and IEEE formats
+\end{itemize}
+
+\subsection*{Conclusion}
+Milestone 5 represents the technical completion of the project’s planned reliability workflow. The final repository artifact set focuses on the completed CPU-based seed, batch-size, and preprocessing-order experiments, along with a targeted CUDA precision comparison, establishing a complete end-to-end demonstration of stability-aware MLOps validation.
+
+\subsection*{Future Work}
+Future work includes expanding the evaluation to additional hardware environments, broadening precision studies beyond \texttt{fp32} and \texttt{amp}, integrating stability metadata into model registry workflows, and building automated alerting and monitoring dashboards.
+% ============================================================
+% ============================================================
+% REPORT #4 
+% Milestone 4: CI Stability Gating (Week 7)
+% ============================================================
+\reportblock{Bi-Weekly Report 4 (Week 7 -- Milestone 4)}
+
+\subsection*{Objective}
+Introduce automated reliability enforcement into the pipeline by converting numerical instability metrics into CI failure conditions. This milestone focuses on validating model stability under small perturbations while preserving cross-run variability as an experimental signal.
+
+\subsection*{Implemented Components}
+\begin{itemize}
+  \item Introduced environment-configurable threshold:
+    \begin{itemize}
+      \item \texttt{MAX\_PERTURB\_DISAGREE} for within-run instability
+    \end{itemize}
+  \item Implemented \textbf{within-run stability gating}:
+    \begin{itemize}
+      \item Training fails if perturbation disagreement exceeds threshold.
+    \end{itemize}
+  \item Integrated threshold enforcement into GitHub Actions CI pipeline.
+  \item Retained cross-run disagreement as a \textbf{measured artifact}, not a failure condition.
+\end{itemize}
+
+\subsection*{Gating Logic}
+\textbf{Within-run condition:}
+\[
+\text{Fail if } \text{Disagree}_{\epsilon} > \tau_{perturb}
+\]
+
+Where $\tau_{perturb}$ is defined via environment variables.
+
+\subsection*{Evidence (Screenshots)}
+% Ensure these exist in screenshots/
+
+\shot{week7_threshold_config.png}{Environment variable configuration for perturbation stability threshold in local and CI environments.}
+
+\shot{week7_within_run_fail.png}{Forced failure demonstrating within-run instability gate triggering when perturbation disagreement exceeds threshold.}
+
+\shot{week7_cross_run_csv.png}{Cross-run comparison retained as an analysis artifact showing disagreement across seed and batch sweeps.}
+
+\shot{week7_ci_failure.png}{GitHub Actions CI failure when perturbation instability threshold is violated.}
+
+\shot{week7_ci_success.png}{Successful CI run when stability remains within acceptable limits.}
+
+\subsection*{Key Outcome}
+Milestone 4 introduces enforceable reliability constraints into the ML pipeline. Numerical instability is no longer just observed—it directly determines whether a run is considered valid within CI.
+
+\subsection*{Interpretation}
+\begin{itemize}
+  \item Within-run perturbation sensitivity provides a principled measure of numerical stability.
+  \item Cross-run disagreement remains an experimental metric reflecting intended configuration variation.
+  \item Separating enforcement (CI gating) from experimentation (sweep analysis) ensures correct interpretation of results.
+\end{itemize}
+
+\subsection*{Impact}
+This milestone aligns the project with production MLOps practices by enforcing reliability constraints during automated validation while preserving flexibility for experimental analysis.
+
+\subsection*{Next Steps (Finalization)}
+\begin{itemize}
+  \item Add visualization of instability trends (seed vs batch plots).
+  \item Finalize report and presentation materials.
+\end{itemize}
+% ============================================================
+% REPORT #3
+% Milestone 3: Cross-Run Disagreement Analysis
+% ============================================================
+\reportblock{Bi-Weekly Report 3 (Week 5 -- Milestone 3)}
+
+\subsection*{Objective}
+Extend the numerical stability framework to quantify cross-run prediction drift across operational perturbations. Milestone 3 introduces run-to-run disagreement analysis for both seed sweeps and batch size sweeps using saved prediction artifacts.
+
+\subsection*{Implemented Components}
+\begin{itemize}
+  \item Added cross-run comparison logic to compute disagreement rates between prediction snapshots.
+  \item Grouped runs by sweep type:
+    \begin{itemize}
+      \item \textbf{Seed sweep}: fixed batch size, varying random seeds.
+      \item \textbf{Batch sweep}: fixed seed, varying batch sizes.
+    \end{itemize}
+  \item Selected deterministic baseline per sweep:
+    \begin{itemize}
+      \item Lowest seed for seed sweep.
+      \item Smallest batch size for batch sweep.
+    \end{itemize}
+  \item Computed disagreement rate:
+  \[
+  \text{Disagreement} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}(\hat{y}^{(baseline)}_i \neq \hat{y}^{(compare)}_i)
+  \]
+  \item Exported results to \texttt{artifacts/comparisons\_week2.csv}.
+  \item Logged comparison CSV to MLflow as an experiment artifact.
+\end{itemize}
+
+\subsection*{Evidence (Screenshots)}
+% Add these images to screenshots/
+% week3_cross_run_csv.png
+% week3_mlflow_csv_artifact.png
+% week3_mlflow_compare.png
+% week3_disagreement_plot.png (optional)
+
+\shot{screenshots/week3_cross_run_csv.png}{Generated \texttt{comparisons.csv} showing baseline-to-run disagreement rates across sweeps.}
+
+\shot{screenshots/week3_mlflow_csv_artifact.png}{MLflow artifact view confirming comparison CSV logged under experiment runs.}
+
+\shot{screenshots/week3_mlflow_compare.png}{MLflow comparison interface displaying stability metrics across seed and batch sweeps.}
+
+% Optional if you generate a plot
+% \shot{week3_disagreement_plot.png}{Visualization of disagreement rate across seed and batch perturbations.}
+
+\subsection*{Key Outcome}
+Milestone 3 establishes measurable cross-run reproducibility gaps. Even when accuracy remains stable, prediction-level disagreement is observed across seeds and batch sizes. This confirms the central thesis: correctness metrics alone do not capture operational fragility.
+
+\subsection*{Interpretation}
+\begin{itemize}
+  \item Seed variation introduces measurable but bounded prediction drift.
+  \item Batch size variation demonstrates additional sensitivity in output consistency.
+  \item Disagreement rates provide a more granular stability signal than accuracy alone.
+\end{itemize}
+
+\subsection*{Next Bi-Weekly Plan}
+\begin{itemize}
+  \item Introduce CI stability thresholds (fail build if disagreement exceeds limit).
+  \item Formalize stability gating logic using environment variables.
+  \item Compare CPU vs GPU and FP32 vs AMP precision modes.
+  \item Produce visual stability comparison plots for final report. 
+
+\end{itemize}
+
+\newpage
+% ============================================================
+% REPORT #2 (MOST RECENT)
+% Milestone 2: Week 2 Progress (Prediction Artifacts + Stability Eval Fix)
+% ============================================================
+\reportblock{Bi-Weekly Report 2 (Week 3 -- Milestone 2)}
+
+\subsection*{Objective}
+Extend the Week 1 reproducibility baseline by adding (1) a larger operational configuration sweep (randomized seed sweep + expanded batch size sweep) and (2) prediction snapshot artifacts per run. This milestone is intended to enable run-to-run agreement analysis in the next milestone.
+
+\subsection*{Implemented Components (Milestone 2)}
+\begin{itemize}
+  \item \textbf{Expanded configuration matrix}: randomized (but reproducible) seed sweep and expanded batch size sweep to simulate operational perturbations.
+  \item \textbf{Stability evaluation function}: added \texttt{stability\_eval} to compute perturbation sensitivity using $\epsilon=10^{-3}$, logging:
+    \begin{itemize}
+      \item Prediction disagreement rate between $x$ and $x+\epsilon$
+      \item Mean logit variance under perturbation
+    \end{itemize}
+  \item \textbf{Prediction snapshot artifacts per run}: for each configuration, the pipeline now performs inference on a fixed evaluation subset and stores:
+    \begin{itemize}
+      \item \texttt{pred.npy} (predicted class indices)
+      \item \texttt{logits.npy} (raw logits)
+      \item \texttt{summary.json} (config + key metrics)
+    \end{itemize}
+  \item \textbf{MLflow artifact logging}: per-run prediction snapshots are logged into MLflow under \\\texttt{predictions/\{cfg\_hash\}} for later audit and comparisons.
+\end{itemize}
+
+\subsection*{Evidence (Screenshots)}
+% New Milestone 2 screenshot filenames (place in screenshots/):
+% week2_config_matrix.png
+% week2_terminal_run.png
+% week2_artifacts_folder.png
+% week2_mlflow_artifacts.png
+
+\subsection*{Configuration Matrix (Week 2)}
+
+\begin{lstlisting}[style=pythonstyle, caption={Week 2 Configuration Matrix (src/config.py)}]
+# src/config.py
+import random
+# -------------------------------
+# Controlled randomness
+# -------------------------------
+# This ensures that the randomly generated seeds
+# are reproducible across runs of the config file.
+random.seed(2026)
+
+NUM_SEEDS = 100
+SEEDS = random.sample(range(1, 10000), NUM_SEEDS)
+
+# Expanded batch size sweep
+BATCH_SIZES = [32, 64, 128, 256, 512]
+
+DEVICE = "cpu"
+PRECISION = "fp32"
+
+CONFIG_MATRIX = []
+
+# -------------------------------
+# Seed sweep (fixed batch size)
+# -------------------------------
+for s in SEEDS:
+    CONFIG_MATRIX.append(
+        {
+            "tag": "seed_sweep",
+            "seed": s,
+            "device": DEVICE,
+            "precision": PRECISION,
+            "batch_size": 128,
+        }
+    )
+
+# -------------------------------
+# Batch size sweep (fixed seed)
+# -------------------------------
+BASELINE_SEED = SEEDS[0]
+
+for bs in BATCH_SIZES:
+    CONFIG_MATRIX.append(
+        {
+            "tag": "batch_sweep",
+            "seed": BASELINE_SEED,
+            "device": DEVICE,
+            "precision": PRECISION,
+            "batch_size": bs,
+        }
+    )
+
+if __name__ == "__main__":
+    print("Generated SEEDS:", SEEDS)
+    print("Total configs:", len(CONFIG_MATRIX))
+\end{lstlisting}
+\subsection*{Design Rationale}
+
+The configuration matrix separates operational perturbations into two controlled sweeps:
+\begin{itemize}
+    \item \textbf{Seed sweep}: evaluates stochastic training variance under identical hyperparameters.
+    \item \textbf{Batch size sweep}: evaluates numerical sensitivity to gradient accumulation and memory behavior.
+\end{itemize}
+
+This structure enables cross-run agreement analysis in the next milestone.
+
+\shot{screenshots/week2_terminal_run.png}{Terminal output showing Week 2 training runs executing with the expanded config sweep.}
+\shot{screenshots/week2_artifacts_folder.png}{Local artifact outputs under \texttt{artifacts/predictions/\{cfg\_hash\}/} including \texttt{pred.npy}, \texttt{logits.npy}, and \texttt{summary.json}.}
+\shot{screenshots/week2_mlflow_artifacts.png}{MLflow UI showing prediction snapshots logged as artifacts under \texttt{predictions/\{cfg\_hash\}/}.}
+\shot{screenshots/week2_mlflow_compare.png}{MLflow run comparison view showing stability metrics across configuration sweep.}
+
+\subsection*{Key Outcome}
+Milestone 2 upgraded the pipeline from metric-only stability logging to evidence-producing runs with reproducible prediction snapshots. This makes it possible to compute and report cross-run disagreement (seed-to-seed and batch-to-batch) in Milestone 3 without re-running experiments.
+
+\subsection*{Next Bi-Weekly Plan}
+\begin{itemize}
+  \item Compute \textbf{cross-run agreement metrics} versus a baseline run within each sweep (seed sweep and batch sweep).
+  \item Output a comparison artifact (CSV/JSON) summarizing disagreement rates and log it to MLflow.
+  \item Introduce a \textbf{CI stability gate} (fail build if disagreement exceeds a threshold) using environment-configurable limits.
+\end{itemize}
+
+\newpage
+
+% ============================================================
+% REPORT #1 (OLDER)
+% Week 1 Baseline
+% ============================================================
+\reportblock{Bi-Weekly Report 1 (Week 1)}
+
+\subsection*{Objective}
+Implement a reproducible baseline pipeline that demonstrates numerical stability risks as an operational concern. Week 1 focused on establishing the toolchain and producing verifiable artifacts (tracking, versioning, CI, and stability metrics).
+
+\subsection*{Implemented Components}
+\begin{itemize}
+  \item Repository structure and modular code layout (\texttt{src/} split for model/train/config/stability).
+  \item Deterministic baseline PyTorch training run(s) with a small fixed subset for fast iteration.
+  \item MLflow experiment tracking (local dev) with stability-adjacent metadata logging.
+  \item Numerical stability metrics based on perturbation sensitivity ($\epsilon = 10^{-3}$):
+    \begin{itemize}
+      \item Prediction disagreement rate between $x$ and $x+\epsilon$
+      \item Mean logit variance under perturbation
+    \end{itemize}
+  \item DVC dataset snapshot tracking (raw data directory versioned).
+  \item GitHub Actions workflow to run baseline training in a clean environment (CI uses a file-based MLflow store, avoiding external service dependencies).
+  \item Dockerfile stub for environment reproducibility.
+\end{itemize}
+
+\subsection*{Evidence (Screenshots)}
+% Put your screenshots in screenshots/ with these easy filenames:
+% repo_structure.png
+% training_terminal.png
+% mlflow_ui_runs.png
+% mlflow_stability_metrics.png
+% dvc_status.png
+% github_actions_green.png
+% docker_build.png
+% git_log.png
+
+\shot{repo_structure.png}{Repository directory structure showing project layout.}
+\shot{training_terminal.png}{Terminal output showing baseline training execution across configuration variants.}
+\shot{mlflow_ui_runs.png}{MLflow UI showing tracked experiment runs and logged parameters.}
+\shot{mlflow_stability_metrics.png}{MLflow metrics view showing perturbation sensitivity stability indicators.}
+\shot{dvc_status.png}{DVC status confirming dataset tracking.}
+\shot{github_actions_green.png}{Successful GitHub Actions CI run validating baseline execution.}
+\shot{docker_build.png}{Docker image successfully built for reproducible execution.}
+\shot{git_log.png}{Git commit history showing incremental Week 1 implementation progress.}
+
+\subsection*{Key Outcome}
+Week 1 established a reproducible baseline that can be executed and compared across operational contexts. The pipeline now logs not only correctness metrics (loss/accuracy) but also early numerical stability indicators suitable for later CI gating and configuration-matrix expansion.
+
+\subsection*{Next Bi-Weekly Plan}
+\begin{itemize}
+  \item Expand configuration matrix to include seed sweeps and batch size variation.
+  \item Add cross-run comparison artifacts (e.g., run-to-run disagreement between saved predictions).
+  \item Introduce CI thresholds (fail/pass gates) on stability metrics (implemented in Week 2 planning).
+  \item Begin CPU vs GPU and FP32 vs AMP comparisons (where available).
+\end{itemize}
+
+\end{document}
